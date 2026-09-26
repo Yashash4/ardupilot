@@ -154,6 +154,14 @@ const AP_Param::GroupInfo SIM::GPSParms::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("OPTIONS",  18, GPSParms, options, 0),
 
+    // @Param: GLTV
+    // @DisplayName: GPS velocity glitch
+    // @Description: Glitch offsets of simulated GPS velocity in NED. Together with GLTCH this allows simulating a GPS error (e.g. spoofing) whose position and velocity are consistent
+    // @Units: m/s
+    // @Vector3Parameter: 1
+    // @User: Advanced
+    AP_GROUPINFO("GLTV",     19, GPSParms, vel_glitch, 0),
+
     AP_GROUPEND
 };
 }
@@ -559,6 +567,12 @@ void GPS::update()
     d.latitude += glitch_offsets.x;
     d.longitude += glitch_offsets.y;
     d.altitude += glitch_offsets.z;
+
+    // Applying GPS velocity glitch
+    const Vector3f vel_glitch = params.vel_glitch;
+    d.speedN += vel_glitch.x;
+    d.speedE += vel_glitch.y;
+    d.speedD += vel_glitch.z;
 
     if (params.jam == 1) {
         simulate_jamming(d);

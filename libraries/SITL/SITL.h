@@ -338,6 +338,7 @@ public:
         AP_Int8 jam; // jamming simulation enable
         AP_Float heading_offset; // heading offset in degrees
         AP_Int32 options; // GPS options bitmask
+        AP_Vector3f vel_glitch; // glitch offsets in NED velocity (m/s)
     };
     GPSParms gps[AP_SIM_MAX_GPS_SENSORS];
 
