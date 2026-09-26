@@ -156,7 +156,7 @@ const AP_Param::GroupInfo SIM::GPSParms::var_info[] = {
 
     // @Param: GLTV
     // @DisplayName: GPS velocity glitch
-    // @Description: Glitch offsets of simulated GPS velocity in NED. Together with GLTCH this allows simulating a GPS error (e.g. spoofing) whose position and velocity are consistent
+    // @Description: Glitch offsets of simulated GPS velocity in NED. The reported position also moves continuously with this velocity, so position and velocity stay consistent (e.g. to simulate GPS spoofing that drifts the position). The accumulated position offset is cleared when the velocity glitch is set back to zero
     // @Units: m/s
     // @Vector3Parameter: 1
     // @User: Advanced
@@ -568,8 +568,22 @@ void GPS::update()
     d.longitude += glitch_offsets.y;
     d.altitude += glitch_offsets.z;
 
-    // Applying GPS velocity glitch
+    // Applying GPS velocity glitch. The position moves continuously with the velocity offset,
+    // so reported position and velocity stay consistent (e.g. a spoofer drifting the position).
+    // The accumulated offset is cleared when the velocity glitch is set back to zero.
     const Vector3f vel_glitch = params.vel_glitch;
+    if (vel_glitch.is_zero()) {
+        vel_glitch_pos_ofs.zero();
+    } else if (last_vel_glitch_ms != 0) {
+        vel_glitch_pos_ofs += vel_glitch * ((now_ms - last_vel_glitch_ms) * 0.001f);
+    }
+    last_vel_glitch_ms = now_ms;
+    if (!vel_glitch_pos_ofs.is_zero()) {
+        const double earth_rad_inv = 1.569612305760477e-7; // use Authalic/Volumetric radius
+        d.latitude += degrees(vel_glitch_pos_ofs.x * earth_rad_inv);
+        d.longitude += degrees(vel_glitch_pos_ofs.y * earth_rad_inv / cos(radians(d.latitude)));
+        d.altitude -= vel_glitch_pos_ofs.z;
+    }
     d.speedN += vel_glitch.x;
     d.speedE += vel_glitch.y;
     d.speedD += vel_glitch.z;
